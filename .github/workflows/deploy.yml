@@ -1,0 +1,87 @@
+name: "Build and Deploy to ECS"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  BuildAndPushDockerImage:
+    name: "Build and Push Docker Image"
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set short commit hash
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:6}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsDeployRole
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            123456789012.dkr.ecr.us-east-1.amazonaws.com/marketing-briefing-bot:latest
+            123456789012.dkr.ecr.us-east-1.amazonaws.com/marketing-briefing-bot:${{ env.SHORT_SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  Deploy:
+    name: "Deploy to ECS"
+    needs: BuildAndPushDockerImage
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    container:
+      image: public.ecr.aws/dnxbrasil/oni:3.6.1
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set short commit hash
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:6}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsDeployRole
+          aws-region: us-east-1
+
+      - name: Deploy to ECS
+        run: |
+          export NODE_ENV=dev
+          oni ecs-deploy -n "marketing-briefing-bot" -t ${{ env.SHORT_SHA }} -f

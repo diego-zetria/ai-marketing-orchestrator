@@ -1,0 +1,43 @@
+# SAM ignore - exclude non-Lambda files from deployment package
+
+# Frontend directories (these are the biggest - ~1.1GB combined)
+frontend
+approval-portal
+
+# Development tools
+.venv
+.env
+.env.*
+.git
+.github
+.ruff_cache
+.pytest_cache
+.coverage
+.worktrees
+.aws-sam
+.aios*
+.claude
+
+# Tests and docs
+tests
+docs
+scripts
+
+# Infrastructure (template handled by SAM separately)
+infra
+
+# Node modules (anywhere)
+node_modules
+
+# Python artifacts
+*.py[cod]
+*.egg-info
+dist
+
+# Config files not needed at runtime
+*.md
+*.toml
+*.ini
+*.cfg
+Makefile
+LICENSE

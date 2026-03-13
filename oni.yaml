@@ -1,0 +1,27 @@
+dev:
+  marketing-briefing-bot:
+    APP_IMAGE: "123456789012.dkr.ecr.us-east-1.amazonaws.com/marketing-briefing-bot"
+    APP_NAME: "marketing-briefing-bot-prod"
+    CLUSTER_NAME: "zyzfy-prod"
+    APP_MEMORY: 1 GB
+    APP_CPU: 0.5 vCPU
+    APP_PORTS:
+      - 8000
+    APP_REGION: us-east-1
+    APP_ACCOUNT: '123456789012'
+    NETWORK_MODE: awsvpc
+    EXECUTION_ROLE_ARN: arn:aws:iam::123456789012:role/ecs-task-marketing-briefing-bot-prod
+    APP_ROLE: arn:aws:iam::123456789012:role/ecs-task-marketing-briefing-bot-prod
+    TASK_ARN: arn:aws:iam::123456789012:role/ecs-task-marketing-briefing-bot-prod
+    APP_SECRET_EXTRACT: "arn:aws:secretsmanager:us-east-1:123456789012:secret:/ecs/marketing-briefing-bot-prod-xxxxxx"
+    APP_CAPACITY_PROVIDERS:
+      - NAME: FARGATE
+        BASE: 0
+        WEIGHT: 0
+      - NAME: FARGATE_SPOT
+        BASE: 0
+        WEIGHT: 1
+    APP_ULIMITS: []
+    APP_VARIABLES:
+    APP_MOUNTPOINTS: []
+    EFS_CONFIG: []

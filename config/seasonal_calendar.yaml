@@ -1,0 +1,151 @@
+# Calendario sazonal brasileiro - datas comerciais e culturais
+# Usado pelo Creative Director (F5.1) para sugerir oportunidades de conteudo
+months:
+  "01":
+    - date: "01/01"
+      event: "Ano Novo"
+      segments: ["all"]
+      priority: "media"
+    - date: "15/01"
+      event: "Dia do Adulto / Blue Monday"
+      segments: ["saude", "bem-estar"]
+      priority: "baixa"
+  "02":
+    - date: "14/02"
+      event: "Valentine's Day (internacional)"
+      segments: ["moda", "lifestyle", "e-commerce"]
+      priority: "media"
+    - date: "Variavel"
+      event: "Carnaval"
+      segments: ["all"]
+      priority: "alta"
+  "03":
+    - date: "08/03"
+      event: "Dia Internacional da Mulher"
+      segments: ["all"]
+      priority: "alta"
+    - date: "15/03"
+      event: "Dia do Consumidor"
+      segments: ["e-commerce", "varejo", "servicos"]
+      priority: "alta"
+    - date: "20/03"
+      event: "Inicio do Outono"
+      segments: ["moda", "lifestyle"]
+      priority: "baixa"
+    - date: "22/03"
+      event: "Dia Mundial da Agua"
+      segments: ["sustentabilidade", "saude"]
+      priority: "baixa"
+  "04":
+    - date: "07/04"
+      event: "Dia Mundial da Saude"
+      segments: ["saude", "bem-estar"]
+      priority: "media"
+    - date: "15/04"
+      event: "Dia da Conservacao do Solo"
+      segments: ["agro", "sustentabilidade"]
+      priority: "baixa"
+    - date: "Variavel"
+      event: "Pascoa"
+      segments: ["all"]
+      priority: "alta"
+  "05":
+    - date: "01/05"
+      event: "Dia do Trabalho"
+      segments: ["all"]
+      priority: "media"
+    - date: "Segundo domingo"
+      event: "Dia das Maes"
+      segments: ["all"]
+      priority: "alta"
+  "06":
+    - date: "05/06"
+      event: "Dia Mundial do Meio Ambiente"
+      segments: ["sustentabilidade", "agro"]
+      priority: "media"
+    - date: "12/06"
+      event: "Dia dos Namorados (Brasil)"
+      segments: ["all"]
+      priority: "alta"
+    - date: "Variavel"
+      event: "Festa Junina"
+      segments: ["all"]
+      priority: "alta"
+  "07":
+    - date: "13/07"
+      event: "Dia do Rock"
+      segments: ["entretenimento", "lifestyle"]
+      priority: "baixa"
+    - date: "20/07"
+      event: "Dia do Amigo"
+      segments: ["all"]
+      priority: "media"
+    - date: "Variavel"
+      event: "Ferias Escolares"
+      segments: ["turismo", "entretenimento", "educacao"]
+      priority: "media"
+  "08":
+    - date: "Segundo domingo"
+      event: "Dia dos Pais"
+      segments: ["all"]
+      priority: "alta"
+    - date: "11/08"
+      event: "Dia do Estudante"
+      segments: ["educacao", "tecnologia"]
+      priority: "baixa"
+  "09":
+    - date: "07/09"
+      event: "Independencia do Brasil"
+      segments: ["all"]
+      priority: "media"
+    - date: "15/09"
+      event: "Dia do Cliente"
+      segments: ["e-commerce", "varejo", "servicos"]
+      priority: "alta"
+    - date: "22/09"
+      event: "Inicio da Primavera"
+      segments: ["moda", "lifestyle"]
+      priority: "media"
+  "10":
+    - date: "01/10"
+      event: "Dia Internacional do Cafe"
+      segments: ["gastronomia", "lifestyle"]
+      priority: "baixa"
+    - date: "12/10"
+      event: "Dia das Criancas"
+      segments: ["all"]
+      priority: "alta"
+    - date: "15/10"
+      event: "Dia do Professor"
+      segments: ["educacao"]
+      priority: "media"
+    - date: "31/10"
+      event: "Halloween"
+      segments: ["entretenimento", "gastronomia"]
+      priority: "media"
+  "11":
+    - date: "Ultima sexta"
+      event: "Black Friday"
+      segments: ["all"]
+      priority: "alta"
+    - date: "Apos Black Friday"
+      event: "Cyber Monday"
+      segments: ["e-commerce", "tecnologia"]
+      priority: "alta"
+    - date: "20/11"
+      event: "Dia da Consciencia Negra"
+      segments: ["all"]
+      priority: "media"
+  "12":
+    - date: "25/12"
+      event: "Natal"
+      segments: ["all"]
+      priority: "alta"
+    - date: "31/12"
+      event: "Reveillon / Ano Novo"
+      segments: ["all"]
+      priority: "alta"
+    - date: "01-24/12"
+      event: "Temporada de Natal (compras)"
+      segments: ["e-commerce", "varejo"]
+      priority: "alta"

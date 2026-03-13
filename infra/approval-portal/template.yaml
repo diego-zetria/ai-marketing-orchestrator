@@ -1,0 +1,643 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Agency Approval Portal - Client approval workflow with Lambda functions,
+  S3 storage, API Gateway, CloudFront, and EventBridge orchestration.
+
+# ============================================================
+# Globals
+# ============================================================
+Globals:
+  Function:
+    Runtime: python3.13
+    Architectures:
+      - x86_64
+    VpcConfig:
+      SecurityGroupIds:
+        - !Ref VpcSecurityGroupId
+      SubnetIds: !Ref VpcSubnetIds
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        DATABASE_URL: !Ref DatabaseUrl
+        CLICKUP_API_TOKEN: !Ref ClickupApiToken
+        JWT_SECRET: !Ref JwtSecret
+        SES_FROM_EMAIL: !Ref SesFromEmail
+        MEDIA_BUCKET: !Ref MediaBucket
+        PORTAL_DOMAIN: !Ref PortalDomain
+        API_DOMAIN: !Ref ApiDomain
+        WHATSAPP_PHONE_NUMBER_ID: !Ref WhatsAppPhoneNumberId
+        WHATSAPP_ACCESS_TOKEN: !Ref WhatsAppAccessToken
+
+# ============================================================
+# Parameters
+# ============================================================
+Parameters:
+  Environment:
+    Type: String
+    Default: staging
+    AllowedValues:
+      - staging
+      - prod
+    Description: Deployment environment
+
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: PostgreSQL connection string (asyncpg)
+
+  ClickupApiToken:
+    Type: String
+    NoEcho: true
+    Description: ClickUp API token for task operations
+
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Secret key for JWT token signing/verification
+
+  SesFromEmail:
+    Type: String
+    Description: Verified SES sender email address
+
+  PortalDomain:
+    Type: String
+    Default: approvals.example.com
+    Description: Custom domain for the approval portal frontend
+
+  ApiDomain:
+    Type: String
+    Default: api-approvals.example.com
+    Description: Custom domain for the approval portal API
+
+  AcmCertificateArn:
+    Type: String
+    Description: ACM certificate ARN for the portal domain (must be in us-east-1)
+
+  VpcSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs for Lambda VPC access (must have NAT Gateway for internet)
+
+  WhatsAppPhoneNumberId:
+    Type: String
+    Default: ""
+    Description: Meta WhatsApp Business phone number ID (empty = disabled)
+
+  WhatsAppAccessToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Meta WhatsApp permanent system user token
+
+  VpcSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for Lambda functions (must allow outbound + RDS ingress)
+
+  TelegramBotToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Telegram bot token for report delivery
+
+# ============================================================
+# Resources
+# ============================================================
+Resources:
+
+  # ----------------------------------------------------------
+  # IAM - Shared Policy for Database & Logging
+  # ----------------------------------------------------------
+  SharedLambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Shared policy for approval portal Lambda functions
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: CloudWatchLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+          - Sid: VPCAccess
+            Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+          - Sid: RDSConnect
+            Effect: Allow
+            Action:
+              - rds-db:connect
+            Resource: !Sub "arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:*/*"
+
+  # ----------------------------------------------------------
+  # IAM - Approval Processor Role
+  # ----------------------------------------------------------
+  ApprovalProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "app-approval-processor-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref SharedLambdaPolicy
+      Policies:
+        - PolicyName: ApprovalProcessorPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3ReadWrite
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt MediaBucket.Arn
+                  - !Sub "${MediaBucket.Arn}/*"
+              - Sid: SES
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: "*"
+              - Sid: EventBridgePut
+                Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: !GetAtt ApprovalEventBus.Arn
+
+  # ----------------------------------------------------------
+  # IAM - Portal API Role
+  # ----------------------------------------------------------
+  PortalApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "app-portal-api-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref SharedLambdaPolicy
+      Policies:
+        - PolicyName: PortalApiPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3ReadWrite
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt MediaBucket.Arn
+                  - !Sub "${MediaBucket.Arn}/*"
+              - Sid: EventBridgePut
+                Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: !GetAtt ApprovalEventBus.Arn
+
+  # ----------------------------------------------------------
+  # IAM - Approval Reminder Role
+  # ----------------------------------------------------------
+  ApprovalReminderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "app-approval-reminder-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref SharedLambdaPolicy
+      Policies:
+        - PolicyName: ApprovalReminderPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: SES
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: "*"
+              - Sid: S3Read
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt MediaBucket.Arn
+                  - !Sub "${MediaBucket.Arn}/*"
+
+  # ----------------------------------------------------------
+  # Lambda - Approval Processor
+  # ----------------------------------------------------------
+  ApprovalProcessorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "app-approval-processor-${Environment}"
+      Description: Processes ClickUp webhook events for client approval workflow
+      Handler: lambdas/approval_processor/handler.process_webhook
+      CodeUri: ../../
+      MemorySize: 512
+      Timeout: 300
+      Role: !GetAtt ApprovalProcessorRole.Arn
+
+  # ----------------------------------------------------------
+  # Lambda - Portal API
+  # ----------------------------------------------------------
+  PortalApiFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "app-portal-api-${Environment}"
+      Description: REST API for the client approval portal
+      Handler: lambdas/portal_api/handler.api_handler
+      CodeUri: ../../
+      MemorySize: 256
+      Timeout: 30
+      Role: !GetAtt PortalApiRole.Arn
+      Events:
+        AuthValidate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PortalApi
+            Path: /api/auth/validate
+            Method: GET
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PortalApi
+            Path: /api/health
+            Method: GET
+        GetAsset:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PortalApi
+            Path: /api/assets/{assetId}
+            Method: GET
+        ApproveAsset:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PortalApi
+            Path: /api/assets/{assetId}/approve
+            Method: POST
+        RequestChanges:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PortalApi
+            Path: /api/assets/{assetId}/request-changes
+            Method: POST
+        AddComment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PortalApi
+            Path: /api/assets/{assetId}/comments
+            Method: POST
+
+  # ----------------------------------------------------------
+  # Lambda - Approval Reminder
+  # ----------------------------------------------------------
+  ApprovalReminderFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "app-approval-reminder-${Environment}"
+      Description: Daily check for pending approvals and sends reminder emails
+      Handler: lambdas/approval_reminder/handler.check_reminders
+      CodeUri: ../../
+      MemorySize: 256
+      Timeout: 60
+      Role: !GetAtt ApprovalReminderRole.Arn
+
+  # ----------------------------------------------------------
+  # IAM - Report Generator Role
+  # ----------------------------------------------------------
+  ReportGeneratorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "app-report-generator-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref SharedLambdaPolicy
+      Policies:
+        - PolicyName: ReportGeneratorPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3ReadWrite
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt MediaBucket.Arn
+                  - !Sub "${MediaBucket.Arn}/*"
+              - Sid: SES
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: "*"
+
+  # ----------------------------------------------------------
+  # Lambda - Report Generator
+  # ----------------------------------------------------------
+  ReportGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "app-report-generator-${Environment}"
+      Description: Generates monthly client report PDFs, uploads to S3, sends via email and Telegram
+      Handler: lambdas/report_generator/handler.generate_report
+      CodeUri: ../../
+      MemorySize: 1024
+      Timeout: 120
+      Role: !GetAtt ReportGeneratorRole.Arn
+      Environment:
+        Variables:
+          TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+
+  # ----------------------------------------------------------
+  # S3 - Media Bucket (attachments, thumbnails)
+  # ----------------------------------------------------------
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "app-approval-media-${Environment}"
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: MoveToInfrequentAccess
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 90
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+            AllowedOrigins:
+              - !Sub "https://${PortalDomain}"
+            MaxAge: 3600
+
+  # ----------------------------------------------------------
+  # S3 - Portal Bucket (Next.js static frontend)
+  # ----------------------------------------------------------
+  PortalBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "approval-portal-${Environment}"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  PortalBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PortalBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontOAI
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt PortalCloudFrontOAI.S3CanonicalUserId
+            Action: s3:GetObject
+            Resource: !Sub "${PortalBucket.Arn}/*"
+
+  # ----------------------------------------------------------
+  # API Gateway - Portal REST API
+  # ----------------------------------------------------------
+  PortalApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "approval-portal-api-${Environment}"
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Requested-With'"
+        AllowOrigin: !Sub "'https://${PortalDomain}'"
+        MaxAge: "'600'"
+      EndpointConfiguration:
+        Type: REGIONAL
+
+  # ----------------------------------------------------------
+  # CloudFront - Portal Distribution
+  # ----------------------------------------------------------
+  PortalCloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "OAI for approval-portal-${Environment}"
+
+  PortalDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "Agency Approval Portal (${Environment})"
+        DefaultRootObject: index.html
+        Aliases:
+          - !Ref PortalDomain
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          # S3 origin for static frontend
+          - Id: S3Origin
+            DomainName: !GetAtt PortalBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${PortalCloudFrontOAI}"
+          # API Gateway origin
+          - Id: ApiOrigin
+            DomainName: !Sub "${PortalApi}.execute-api.${AWS::Region}.amazonaws.com"
+            OriginPath: !Sub "/${Environment}"
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              HTTPSPort: 443
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+          Compress: true
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: https-only
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AllViewerExceptHostHeader
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+        CustomErrorResponses:
+          # SPA fallback: serve index.html for 404s from S3
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+
+  # ----------------------------------------------------------
+  # EventBridge - Custom Event Bus
+  # ----------------------------------------------------------
+  ApprovalEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub "app-approval-${Environment}"
+
+  # ----------------------------------------------------------
+  # EventBridge - Processor Rule (client_approval events)
+  # ----------------------------------------------------------
+  ProcessorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "app-approval-processor-${Environment}"
+      Description: Triggers approval processor when client approval is requested
+      EventBusName: !Ref ApprovalEventBus
+      State: ENABLED
+      EventPattern:
+        source:
+          - app.clickup
+        detail-type:
+          - task_status_changed
+        detail:
+          status:
+            - client_approval
+      Targets:
+        - Id: ApprovalProcessorTarget
+          Arn: !GetAtt ApprovalProcessorFunction.Arn
+
+  ProcessorRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApprovalProcessorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ProcessorRule.Arn
+
+  # ----------------------------------------------------------
+  # EventBridge - Reminder Schedule Rule (daily 9AM BRT = 12:00 UTC)
+  # ----------------------------------------------------------
+  ReminderScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "app-approval-reminder-${Environment}"
+      Description: Daily 9AM BRT reminder check for pending client approvals
+      State: ENABLED
+      ScheduleExpression: "cron(0 12 * * ? *)"
+      Targets:
+        - Id: ApprovalReminderTarget
+          Arn: !GetAtt ApprovalReminderFunction.Arn
+
+  ReminderRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApprovalReminderFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ReminderScheduleRule.Arn
+
+  # ----------------------------------------------------------
+  # EventBridge - Report Generator Rule (MonthlyReportGenerated)
+  # ----------------------------------------------------------
+  ReportGeneratorRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "app-report-generator-${Environment}"
+      Description: Triggers report generator when monthly report data is published
+      EventBusName: !Ref ApprovalEventBus
+      State: ENABLED
+      EventPattern:
+        source:
+          - app.bot.reports
+        detail-type:
+          - MonthlyReportGenerated
+      Targets:
+        - Id: ReportGeneratorTarget
+          Arn: !GetAtt ReportGeneratorFunction.Arn
+
+  ReportGeneratorRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ReportGeneratorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ReportGeneratorRule.Arn
+
+# ============================================================
+# Outputs
+# ============================================================
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${PortalApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+
+  PortalUrl:
+    Description: Approval portal URL (CloudFront)
+    Value: !Sub "https://${PortalDomain}"
+
+  MediaBucketName:
+    Description: S3 bucket for media assets
+    Value: !Ref MediaBucket
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID for cache invalidation
+    Value: !Ref PortalDistribution
+
+  ReportGeneratorFunctionArn:
+    Description: ARN of the report generator Lambda function
+    Value: !GetAtt ReportGeneratorFunction.Arn

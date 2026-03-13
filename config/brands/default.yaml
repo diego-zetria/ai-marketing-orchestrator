@@ -1,0 +1,26 @@
+brand: default
+tone: "profissional e amigavel"
+forbidden_words: []
+required_elements:
+  instagram:
+    cta_required: true
+    hashtag_count_min: 3
+    hashtag_count_max: 5
+    emoji_max: 3
+  linkedin:
+    cta_required: true
+    hashtag_count_min: 2
+    hashtag_count_max: 4
+    emoji_max: 1
+color_palette: []
+hashtags:
+  required: []
+  suggested: []
+guidelines:
+  - "Tom profissional e amigavel"
+  - "Evitar jargoes tecnicos excessivos"
+  - "CTAs claros e diretos"
+  - "Verificar ortografia e gramatica"
+  - "Emojis com moderacao"
+  - "Linguagem inclusiva"
+  - "Consistencia visual com identidade da marca"

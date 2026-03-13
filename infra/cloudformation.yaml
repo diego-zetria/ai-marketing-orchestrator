@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Marketing Briefing Bot - ECS Fargate Service with CodeDeploy Blue/Green"
+
+# ============================================================
+# Resources created OUTSIDE this template (pre-existing):
+#   - VPC, Subnets, Security Groups (Terraform-managed)
+#   - ALB + HTTPS Listener (shared across services)
+#   - Aurora/RDS PostgreSQL
+#   - ElastiCache Redis
+#   - ECR Repository: marketing-briefing-bot
+#   - Secrets Manager: /ecs/marketing-briefing-bot-prod
+#   - CloudWatch Log Group: /ecs/zyzfy-prod/marketing-briefing-bot-prod
+#   - ALB Target Groups: marketing-briefing-bot-prod (blue) + marketing-briefing-bot-prod-green
+#   - ALB Listener Rule (host: bot.example.com)
+#   - IAM Roles: ecs-task-marketing-briefing-bot-prod, codedeploy-service-zyzfy-prod-us-east-1
+#   - Route 53 record: bot.example.com
+#
+# This template manages: Task Definition + ECS Service
+# CodeDeploy resources are created via CLI (ONI manages deployments)
+# ============================================================
+
+Parameters:
+  ClusterName:
+    Type: String
+    Default: "zyzfy-prod"
+
+  ServiceName:
+    Type: String
+    Default: "marketing-briefing-bot-prod"
+
+  ImageTag:
+    Type: String
+    Default: "latest"
+    Description: "Docker image tag to deploy"
+
+  ContainerPort:
+    Type: Number
+    Default: 8000
+
+  TaskCpu:
+    Type: String
+    Default: "512"
+    AllowedValues: ["256", "512", "1024"]
+
+  TaskMemory:
+    Type: String
+    Default: "1024"
+    AllowedValues: ["512", "1024", "2048"]
+
+  DesiredCount:
+    Type: Number
+    Default: 1
+
+  # Pre-existing resource references
+  ECRRepositoryUri:
+    Type: String
+    Default: "123456789012.dkr.ecr.us-east-1.amazonaws.com/marketing-briefing-bot"
+
+  SecretArn:
+    Type: String
+    Default: "arn:aws:secretsmanager:us-east-1:123456789012:secret:/ecs/marketing-briefing-bot-prod-xxxxxx"
+
+  ExecutionRoleArn:
+    Type: String
+    Default: "arn:aws:iam::123456789012:role/ecs-task-marketing-briefing-bot-prod"
+
+  TaskRoleArn:
+    Type: String
+    Default: "arn:aws:iam::123456789012:role/ecs-task-marketing-briefing-bot-prod"
+
+  TargetGroupArn:
+    Type: String
+    Default: "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-app-prod/your-target-group-id"
+
+  SubnetA:
+    Type: String
+    Default: "subnet-xxxxxxxxx"
+    Description: "Private Subnet A"
+
+  SubnetB:
+    Type: String
+    Default: "subnet-yyyyyyyyy"
+    Description: "Private Subnet B"
+
+  SecurityGroup:
+    Type: String
+    Default: "sg-xxxxxxxxx"
+    Description: "ECS nodes security group"
+
+  LogGroup:
+    Type: String
+    Default: "/ecs/zyzfy-prod/marketing-briefing-bot-prod"
+
+Resources:
+  # ============================================================
+  # ECS Task Definition
+  # ============================================================
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${ClusterName}-${ServiceName}"
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      TaskRoleArn: !Ref TaskRoleArn
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Image: !Sub "${ECRRepositoryUri}:${ImageTag}"
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref "AWS::Region"
+              awslogs-stream-prefix: !Ref ServiceName
+          Secrets:
+            - Name: TELEGRAM_BOT_TOKEN
+              ValueFrom: !Sub "${SecretArn}:TELEGRAM_BOT_TOKEN::"
+            - Name: TELEGRAM_WEBHOOK_URL
+              ValueFrom: !Sub "${SecretArn}:TELEGRAM_WEBHOOK_URL::"
+            - Name: TELEGRAM_ALLOWED_USER_IDS
+              ValueFrom: !Sub "${SecretArn}:TELEGRAM_ALLOWED_USER_IDS::"
+            - Name: TELEGRAM_NOTIFICATION_GROUP_ID
+              ValueFrom: !Sub "${SecretArn}:TELEGRAM_NOTIFICATION_GROUP_ID::"
+            - Name: OPENROUTER_API_KEY
+              ValueFrom: !Sub "${SecretArn}:OPENROUTER_API_KEY::"
+            - Name: OPENROUTER_MODEL_ID
+              ValueFrom: !Sub "${SecretArn}:OPENROUTER_MODEL_ID::"
+            - Name: CLICKUP_API_TOKEN
+              ValueFrom: !Sub "${SecretArn}:CLICKUP_API_TOKEN::"
+            - Name: CLICKUP_DEFAULT_LIST_ID
+              ValueFrom: !Sub "${SecretArn}:CLICKUP_DEFAULT_LIST_ID::"
+            - Name: CLICKUP_TEAM_ID
+              ValueFrom: !Sub "${SecretArn}:CLICKUP_TEAM_ID::"
+            - Name: CLICKUP_WEBHOOK_SECRET
+              ValueFrom: !Sub "${SecretArn}:CLICKUP_WEBHOOK_SECRET::"
+            - Name: DATABASE_URL
+              ValueFrom: !Sub "${SecretArn}:DATABASE_URL::"
+            - Name: APP_ENV
+              ValueFrom: !Sub "${SecretArn}:APP_ENV::"
+            - Name: APP_LOG_LEVEL
+              ValueFrom: !Sub "${SecretArn}:APP_LOG_LEVEL::"
+            - Name: SUMMARY_DAILY_HOUR
+              ValueFrom: !Sub "${SecretArn}:SUMMARY_DAILY_HOUR::"
+            - Name: SUMMARY_DAILY_MINUTE
+              ValueFrom: !Sub "${SecretArn}:SUMMARY_DAILY_MINUTE::"
+            - Name: SUMMARY_TIMEZONE
+              ValueFrom: !Sub "${SecretArn}:SUMMARY_TIMEZONE::"
+
+  # ============================================================
+  # ECS Service (Fargate Spot + CodeDeploy Blue/Green)
+  # ============================================================
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref ClusterName
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 1
+          Base: 0
+      DeploymentController:
+        Type: CODE_DEPLOY
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - !Ref SubnetA
+            - !Ref SubnetB
+          SecurityGroups:
+            - !Ref SecurityGroup
+      LoadBalancers:
+        - TargetGroupArn: !Ref TargetGroupArn
+          ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ContainerPort
+      EnableExecuteCommand: true
+
+Outputs:
+  ServiceName:
+    Value: !Ref ServiceName
+  TaskDefinitionArn:
+    Value: !Ref TaskDefinition
+  ServiceArn:
+    Value: !Ref Service
+  WebhookUrl:
+    Value: "https://bot.example.com/webhook/telegram"
+  ClickUpWebhookUrl:
+    Value: "https://bot.example.com/webhooks/clickup"

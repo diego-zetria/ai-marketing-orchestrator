@@ -1,0 +1,45 @@
+# Version control
+.git/
+.github/
+
+# IDE / editor
+.claude/
+.DS_Store
+.aios-core/
+.worktrees/
+
+# Python
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+htmlcov/
+.coverage
+
+# Environment
+.env
+.env.*
+
+# Build caches
+.pip-cache/
+
+# Not needed in main app image
+docs/
+tests/
+scripts/
+*.md
+Makefile
+Dockerfile
+docker-compose*.yml
+
+# Separate projects (not part of main Docker build)
+approval-portal/
+lambdas/
+infra/
+
+# Frontend artifacts (node_modules rebuilt inside container)
+frontend/node_modules/
+frontend/.next/

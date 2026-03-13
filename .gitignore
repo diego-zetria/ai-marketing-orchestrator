@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+*.egg-info/
+dist/
+.ruff_cache/
+.pytest_cache/
+.coverage
+config/workspace.yaml
+.worktrees/
+
+# Build caches
+.pip-cache/
+
+# SAM deploy config (contains secrets)
+samconfig.toml
+infra/*/samconfig.toml
+
+# AWS SAM build artifacts
+.aws-sam/

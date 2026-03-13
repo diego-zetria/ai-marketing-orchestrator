@@ -1,0 +1,155 @@
+# Regras de atribuicao de tasks para a Agency
+# Edite este arquivo para configurar assignees, tags e overrides por cliente.
+# NOTA: IDs configurados para testes com Admin User (YOUR_CLICKUP_USER_ID)
+
+assignment_rules:
+  design:
+    default_assignees: ["YOUR_CLICKUP_USER_ID"]
+    tags: ["design"]
+  copy:
+    default_assignees: ["YOUR_CLICKUP_USER_ID"]
+    tags: ["copy", "redacao"]
+  design+copy:
+    default_assignees: ["YOUR_CLICKUP_USER_ID"]
+    tags: ["design", "copy"]
+
+reviewers:
+  strategy: "96270997"   # Strategy Lead
+  content: "89317548"    # Content Lead
+
+client_overrides:
+  client_alpha:
+    list_id: "LIST_ID_CLIENT_ALPHA"
+    designer: "89340000"        # Designer A
+    account: "95320777"         # Account Manager B
+  hotel_10:
+    list_id: "LIST_ID_CLIENT_BETA"
+    designer: "95324421"        # Designer B
+    account: "95320777"         # Account Manager B
+  client_gamma:
+    list_id: "LIST_ID_CLIENT_GAMMA"
+    designer: "95324421"        # Designer B
+    account: "89347146"         # Account Manager A
+  client_delta:
+    list_id: "LIST_ID_CLIENT_DELTA"
+    designer: "95324421"        # Designer B
+    account: "89347146"         # Account Manager A
+  client_epsilon:
+    list_id: "LIST_ID_CLIENT_EPSILON"
+    designer: "95324421"        # Designer B
+    account: "95320777"         # Account Manager B
+  client_zeta:
+    list_id: "LIST_ID_CLIENT_ZETA"
+    designer: "95324421"        # Designer B
+    account: "89347146"         # Account Manager A
+
+default_config:
+  list_id: "901705254665"  # Creative Journey
+  initial_status: "planejamento"
+
+# Mapeamento ClickUp user ID <-> Telegram chat ID
+# telegram_chat_id: 0 = placeholder (coletar IDs reais da equipe)
+team_mapping:
+  "96270997":    # Strategy Lead
+    telegram_chat_id: 0
+    name: "Strategy Lead"
+    role: "strategy_reviewer"
+  "89317548":    # Content Lead
+    telegram_chat_id: 0
+    name: "Content Lead"
+    role: "content_reviewer"
+  "89340000":    # Designer A
+    telegram_chat_id: 0
+    name: "Designer A"
+    role: "designer"
+  "95324421":    # Designer B
+    telegram_chat_id: 0
+    name: "Pedro H. Eger"
+    role: "designer"
+  "89347146":    # Account Manager A
+    telegram_chat_id: 0
+    name: "Account Manager A"
+    role: "account"
+  "95320777":    # Account Manager B
+    telegram_chat_id: 0
+    name: "Account Manager B"
+    role: "account"
+  "YOUR_CLICKUP_USER_ID":   # Admin User (dev/test)
+    telegram_chat_id: ADMIN_TELEGRAM_ID
+    name: "Admin User"
+    role: "admin"
+
+# Regras de notificacao por mudanca de status
+notification_rules:
+  revisao:
+    notify_roles: ["strategy_reviewer", "content_reviewer"]
+    message: "precisa de revisao"
+  alteracao:
+    notify_roles: ["designer"]
+    message: "voltou para alteracao (ajustes necessarios)"
+  aprovado:
+    notify_roles: ["designer", "account"]
+    message: "foi aprovada!"
+  pronto:
+    notify: "group"
+    message: "esta pronta e finalizada"
+  revisao_cliente:
+    notify_roles: ["account"]
+    message: "foi enviada para aprovacao do cliente"
+  alteracao_cliente:
+    notify_roles: ["designer", "account"]
+    message: "precisa de alteracao (solicitado pelo cliente)"
+  aprovado_cliente:
+    notify_roles: ["designer", "account"]
+    message: "foi aprovada pelo cliente!"
+
+# A9: Forum topics por cliente (Telegram Supergroup)
+# topic_id: 0 = placeholder (configurar apos criar topics no grupo)
+telegram_topics:
+  client_alpha:
+    topic_id: 0
+    label: "ClientAlpha"
+  hotel_10:
+    topic_id: 0
+    label: "ClientBeta"
+  client_gamma:
+    topic_id: 0
+    label: "ClientGamma"
+  client_delta:
+    topic_id: 0
+    label: "ClientDelta"
+  client_epsilon:
+    topic_id: 0
+    label: "ClientEpsilon"
+  client_zeta:
+    topic_id: 0
+    label: "ClientZeta"
+  geral:
+    topic_id: 0
+    label: "Geral"
+
+# A1: Auto-status via deteccao de comentarios
+# mode: "confirm" (botoes Telegram) ou "auto" (move direto)
+auto_status:
+  enabled: true
+  mode: "confirm"
+  delivery:
+    patterns: ["segue para aprovacao", "segue para aprovação", "para revisao", "para revisão", "finalizado", "pronto para revisao", "pronto para revisão"]
+    allowed_roles: ["designer", "video"]
+    target_status: "revisao"
+    valid_from: ["desenvolvimento", "em criacao"]
+  approval:
+    patterns: ["aprovado", "por mim okk", "por mim ok", "tudo aprovado", "amassou", "pode seguir"]
+    allowed_roles: ["strategy_reviewer", "content_reviewer"]
+    target_status: "aprovado"
+    valid_from: ["revisao"]
+  alteration_done:
+    patterns: ["alterado", "alteração feita", "alteracao feita", "atualizei", "arquivos atualizados", "ajustado", "feito"]
+    allowed_roles: ["designer", "video"]
+    target_status: "revisao"
+    valid_from: ["alteracao"]
+  internal_approved:
+    patterns: ["aprovado internamente", "segue para cliente"]
+    allowed_roles: ["strategy_reviewer", "content_reviewer", "account"]
+    target_status: "revisao_cliente"
+    valid_from: ["aprovado"]

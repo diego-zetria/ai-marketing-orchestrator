@@ -1,0 +1,37 @@
+brand: client_delta
+tone: "inovador e tecnologico"
+forbidden_words:
+  - "barato"
+  - "desconto"
+  - "promocao"
+required_elements:
+  instagram:
+    logo_position: "bottom-right"
+    dimensions: "1080x1080"
+    cta_required: true
+    hashtag_count_min: 3
+    hashtag_count_max: 5
+    emoji_max: 2
+  linkedin:
+    cta_required: true
+    hashtag_count_min: 2
+    hashtag_count_max: 4
+    emoji_max: 1
+color_palette:
+  - "#1A365D"
+  - "#2B6CB0"
+  - "#FFFFFF"
+  - "#718096"
+hashtags:
+  required:
+    - "#ClientDelta"
+  suggested:
+    - "#Inovacao"
+    - "#Tecnologia"
+guidelines:
+  - "Linguagem jovem e dinamica"
+  - "Foco em solucoes e resultados"
+  - "Evitar termos muito informais ou girias"
+  - "CTAs orientados a acao: Saiba mais, Fale conosco"
+  - "Emojis minimalistas (maximo 2 por post)"
+  - "Fontes: manter consistencia com manual da marca"

@@ -1,0 +1,38 @@
+brand: client_alpha
+tone: "sofisticado e premium"
+forbidden_words:
+  - "barato"
+  - "desconto"
+  - "gratis"
+  - "oferta"
+required_elements:
+  instagram:
+    logo_position: "bottom-right"
+    dimensions: "1080x1080"
+    cta_required: true
+    hashtag_count_min: 2
+    hashtag_count_max: 4
+    emoji_max: 0
+  linkedin:
+    cta_required: true
+    hashtag_count_min: 2
+    hashtag_count_max: 3
+    emoji_max: 0
+color_palette:
+  - "#1A1A2E"
+  - "#C5A55A"
+  - "#FFFFFF"
+hashtags:
+  required:
+    - "#ClientAlpha"
+  suggested:
+    - "#Qualidade"
+    - "#Premium"
+guidelines:
+  - "Linguagem elegante, sem exageros"
+  - "Foco em qualidade e exclusividade"
+  - "Evitar linguagem casual ou coloquial"
+  - "CTAs sutis: Descubra, Conheca, Explore"
+  - "Emojis discretos ou ausentes"
+  - "Imagens de alta qualidade obrigatorias"
+  - "Manter alinhamento com posicionamento premium"

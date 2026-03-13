@@ -1,0 +1,234 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+    --radius-3xl: calc(var(--radius) + 12px);
+    --radius-4xl: calc(var(--radius) + 16px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-chart-6: var(--chart-6);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    /* Semantic colors */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-subtle: var(--success-subtle);
+    --color-success-subtle-foreground: var(--success-subtle-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning-subtle: var(--warning-subtle);
+    --color-warning-subtle-foreground: var(--warning-subtle-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-info-subtle: var(--info-subtle);
+    --color-info-subtle-foreground: var(--info-subtle-foreground);
+    --color-error: var(--error);
+    --color-error-foreground: var(--error-foreground);
+    --color-error-subtle: var(--error-subtle);
+    --color-error-subtle-foreground: var(--error-subtle-foreground);
+}
+
+/* ================================================================
+   Agency Design System — Quantum Blue + Pulse Violet
+   ================================================================
+   Primary:  Pulse Violet  #8A6CFF
+   Sidebar:  Quantum Blue  #0E2A47
+   Neutral:  Zinc scale
+   ================================================================ */
+
+:root {
+    --radius: 0.625rem;
+
+    /* --- Base surfaces --- */
+    --background: oklch(1 0 0);                         /* #FFFFFF */
+    --foreground: oklch(0.141 0.005 285.8);             /* zinc-950 */
+    --card: oklch(1 0 0);                               /* #FFFFFF */
+    --card-foreground: oklch(0.141 0.005 285.8);        /* zinc-950 */
+    --popover: oklch(1 0 0);                            /* #FFFFFF */
+    --popover-foreground: oklch(0.141 0.005 285.8);     /* zinc-950 */
+
+    /* --- Brand: Pulse Violet --- */
+    --primary: oklch(0.635 0.209 288.4);                /* #8A6CFF */
+    --primary-foreground: oklch(0.985 0 0);             /* white */
+
+    /* --- Secondary & muted (zinc scale) --- */
+    --secondary: oklch(0.967 0.001 286.4);              /* zinc-100 #F4F4F5 */
+    --secondary-foreground: oklch(0.21 0.006 285.8);    /* zinc-900 #18181B */
+    --muted: oklch(0.967 0.001 286.4);                  /* zinc-100 */
+    --muted-foreground: oklch(0.552 0.016 286.0);       /* zinc-500 #71717A */
+
+    /* --- Accent: violet tint for hover/active states --- */
+    --accent: oklch(0.944 0.030 294.2);                 /* #EDE9FF violet-50 */
+    --accent-foreground: oklch(0.487 0.206 284.9);      /* #5B3FCC deep violet */
+
+    /* --- Destructive --- */
+    --destructive: oklch(0.637 0.208 25.3);             /* #EF4444 red-500 */
+    --destructive-foreground: oklch(0.985 0 0);         /* white */
+
+    /* --- Borders & inputs (zinc-200) --- */
+    --border: oklch(0.920 0.004 286.3);                 /* #E4E4E7 */
+    --input: oklch(0.920 0.004 286.3);                  /* #E4E4E7 */
+    --ring: oklch(0.635 0.209 288.4);                   /* Pulse Violet — focus rings */
+
+    /* --- Charts (6-color palette) --- */
+    --chart-1: oklch(0.635 0.209 288.4);                /* Violet #8A6CFF */
+    --chart-2: oklch(0.588 0.139 242.0);                /* Sky #0284C7 */
+    --chart-3: oklch(0.596 0.127 163.2);                /* Emerald #059669 */
+    --chart-4: oklch(0.769 0.165 70.1);                 /* Amber #F59E0B */
+    --chart-5: oklch(0.591 0.257 322.9);                /* Fuchsia #C026D3 */
+    --chart-6: oklch(0.646 0.194 41.1);                 /* Orange #EA580C */
+
+    /* --- Sidebar: Quantum Blue (dark in both modes) --- */
+    --sidebar: oklch(0.280 0.063 251.8);                /* #0E2A47 */
+    --sidebar-foreground: oklch(0.869 0.020 252.9);     /* slate-300 #CBD5E1 */
+    --sidebar-primary: oklch(0.635 0.209 288.4);        /* Pulse Violet */
+    --sidebar-primary-foreground: oklch(0.985 0 0);     /* white */
+    --sidebar-accent: oklch(0.325 0.073 253.3);         /* #163558 hover */
+    --sidebar-accent-foreground: oklch(0.929 0.013 255.5); /* slate-200 #E2E8F0 */
+    --sidebar-border: oklch(0.346 0.074 256.0);         /* #1E3A5F */
+    --sidebar-ring: oklch(0.635 0.209 288.4);           /* Pulse Violet */
+
+    /* --- Semantic: Success (emerald) --- */
+    --success: oklch(0.596 0.127 163.2);                /* #059669 */
+    --success-foreground: oklch(0.985 0 0);             /* white */
+    --success-subtle: oklch(0.950 0.051 163.1);         /* #D1FAE5 */
+    --success-subtle-foreground: oklch(0.432 0.086 166.9); /* #065F46 */
+
+    /* --- Semantic: Warning (amber) --- */
+    --warning: oklch(0.769 0.165 70.1);                 /* #F59E0B */
+    --warning-foreground: oklch(0.985 0 0);             /* white */
+    --warning-subtle: oklch(0.973 0.069 103.2);         /* #FEF9C3 */
+    --warning-subtle-foreground: oklch(0.473 0.125 46.2); /* #92400E */
+
+    /* --- Semantic: Error (red) --- */
+    --error: oklch(0.637 0.208 25.3);                   /* #EF4444 */
+    --error-foreground: oklch(0.985 0 0);               /* white */
+    --error-subtle: oklch(0.971 0.013 17.4);            /* #FEF2F2 */
+    --error-subtle-foreground: oklch(0.444 0.161 26.9); /* #991B1B */
+
+    /* --- Semantic: Info (sky) --- */
+    --info: oklch(0.685 0.148 237.3);                   /* #0EA5E9 */
+    --info-foreground: oklch(0.985 0 0);                /* white */
+    --info-subtle: oklch(0.951 0.025 236.8);            /* #E0F2FE */
+    --info-subtle-foreground: oklch(0.443 0.100 240.8); /* #075985 */
+}
+
+.dark {
+    /* --- Base surfaces (zinc dark scale) --- */
+    --background: oklch(0.141 0.005 285.8);             /* zinc-950 #09090B */
+    --foreground: oklch(0.985 0.001 286.4);             /* zinc-50 #FAFAFA */
+    --card: oklch(0.21 0.006 285.8);                    /* zinc-900 #18181B */
+    --card-foreground: oklch(0.985 0.001 286.4);        /* zinc-50 */
+    --popover: oklch(0.21 0.006 285.8);                 /* zinc-900 */
+    --popover-foreground: oklch(0.985 0.001 286.4);     /* zinc-50 */
+
+    /* --- Brand: Pulse Violet (lighter for dark bg) --- */
+    --primary: oklch(0.712 0.166 292.8);                /* #A78BFF */
+    --primary-foreground: oklch(0.985 0 0);             /* white */
+
+    /* --- Secondary & muted (zinc dark scale) --- */
+    --secondary: oklch(0.274 0.006 286.0);              /* zinc-800 #27272A */
+    --secondary-foreground: oklch(0.985 0.001 286.4);   /* zinc-50 */
+    --muted: oklch(0.274 0.006 286.0);                  /* zinc-800 */
+    --muted-foreground: oklch(0.705 0.015 286.1);       /* zinc-400 #A1A1AA */
+
+    /* --- Accent: dark violet surface --- */
+    --accent: oklch(0.240 0.086 286.6);                 /* #1E1545 */
+    --accent-foreground: oklch(0.811 0.101 293.6);      /* #C4B5FD violet-300 */
+
+    /* --- Destructive (lighter red for dark bg) --- */
+    --destructive: oklch(0.711 0.166 22.2);             /* #F87171 red-400 */
+    --destructive-foreground: oklch(0.985 0 0);         /* white */
+
+    /* --- Borders & inputs (zinc-800) --- */
+    --border: oklch(0.274 0.006 286.0);                 /* #27272A */
+    --input: oklch(0.274 0.006 286.0);                  /* #27272A */
+    --ring: oklch(0.712 0.166 292.8);                   /* Pulse Violet lighter */
+
+    /* --- Charts (lighter for dark bg) --- */
+    --chart-1: oklch(0.712 0.166 292.8);                /* Violet #A78BFF */
+    --chart-2: oklch(0.754 0.139 232.7);                /* Sky #38BDF8 */
+    --chart-3: oklch(0.773 0.153 163.2);                /* Emerald #34D399 */
+    --chart-4: oklch(0.837 0.164 84.4);                 /* Amber #FBBF24 */
+    --chart-5: oklch(0.748 0.207 322.2);                /* Fuchsia #E879F9 */
+    --chart-6: oklch(0.758 0.159 55.9);                 /* Orange #FB923C */
+
+    /* --- Sidebar: Quantum Blue (slightly darker in dark mode) --- */
+    --sidebar: oklch(0.200 0.050 251.8);                /* deeper navy */
+    --sidebar-foreground: oklch(0.830 0.020 252.9);     /* slate-300 muted */
+    --sidebar-primary: oklch(0.712 0.166 292.8);        /* Pulse Violet lighter */
+    --sidebar-primary-foreground: oklch(0.985 0 0);     /* white */
+    --sidebar-accent: oklch(0.260 0.060 251.8);         /* navy hover */
+    --sidebar-accent-foreground: oklch(0.929 0.013 255.5); /* slate-200 */
+    --sidebar-border: oklch(0.300 0.060 253.0);         /* navy border */
+    --sidebar-ring: oklch(0.712 0.166 292.8);           /* Pulse Violet lighter */
+
+    /* --- Semantic: Success (lighter for dark bg) --- */
+    --success: oklch(0.773 0.153 163.2);                /* #34D399 */
+    --success-foreground: oklch(0.141 0.005 285.8);     /* dark text */
+    --success-subtle: oklch(0.280 0.060 163.0);         /* dark green surface */
+    --success-subtle-foreground: oklch(0.850 0.100 163.0); /* light green text */
+
+    /* --- Semantic: Warning (lighter for dark bg) --- */
+    --warning: oklch(0.837 0.164 84.4);                 /* #FBBF24 */
+    --warning-foreground: oklch(0.141 0.005 285.8);     /* dark text */
+    --warning-subtle: oklch(0.300 0.070 70.0);          /* dark amber surface */
+    --warning-subtle-foreground: oklch(0.880 0.120 84.0); /* light amber text */
+
+    /* --- Semantic: Error (lighter for dark bg) --- */
+    --error: oklch(0.711 0.166 22.2);                   /* #F87171 */
+    --error-foreground: oklch(0.985 0 0);               /* white */
+    --error-subtle: oklch(0.280 0.080 25.0);            /* dark red surface */
+    --error-subtle-foreground: oklch(0.850 0.100 22.0); /* light red text */
+
+    /* --- Semantic: Info (lighter for dark bg) --- */
+    --info: oklch(0.754 0.139 232.7);                   /* #38BDF8 */
+    --info-foreground: oklch(0.141 0.005 285.8);        /* dark text */
+    --info-subtle: oklch(0.280 0.060 237.0);            /* dark sky surface */
+    --info-subtle-foreground: oklch(0.850 0.100 232.0); /* light sky text */
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
