@@ -1,218 +1,155 @@
-# Marketing Briefing Bot
+# AI Marketing Orchestrator
 
-Sistema de automacao com IA para a agencia de marketing **Agency**. O bot recebe briefings de clientes via Telegram e cria automaticamente tasks estruturadas no ClickUp, seguindo o fluxo de trabalho padrao da agencia.
+AI-powered automation platform for marketing agencies. A **Telegram bot** receives client briefings in natural language and automatically creates structured tasks in ClickUp, with a **client approval portal**, **Instagram analytics**, and **automated monthly reporting**.
 
-## Problema
+## Features
 
-O time de atendimento da Agency recebe briefings de clientes e precisa criar manualmente cards no ClickUp com titulo padronizado, subtasks por post, assignees corretos e status inicial. Esse processo e repetitivo e propenso a erros.
+- **Briefing Analysis** -- AI agents parse free-text briefings and extract structured data (client, deliverables, deadlines, priority)
+- **Automated Task Creation** -- Creates ClickUp cards with correct naming conventions, subtasks per deliverable, assignees, and tags
+- **Rules Engine** -- YAML-based rules for team assignments, client overrides, and workflow routing
+- **Client Approval Portal** -- React + Next.js portal with magic link auth for clients to review and approve creative assets
+- **Instagram Analytics** -- Automated Instagram insights sync with media and account-level metrics
+- **Monthly Reports** -- Auto-generated performance reports with charts (PDF via Lambda)
+- **AI Review Team** -- Creative director, content reviewer, and brand compliance agents for internal QA
+- **Admin Dashboard** -- Full backoffice UI (React + Vite) for team management, workflows, knowledge base, and notifications
+- **Observability** -- Langfuse integration for LLM cost tracking and tracing
 
-## Solucao
-
-Um bot no Telegram da agencia onde o funcionario do atendimento envia o briefing do cliente em texto livre. Um agente de IA analisa o briefing e cria automaticamente o card completo no ClickUp.
-
-### Fluxo
-
-```
-Funcionario envia briefing no Telegram
-    -> Telegram Webhook recebe a mensagem
-    -> Agente IA analisa o briefing (Agno + OpenRouter)
-    -> Motor de Regras determina assignees (rules.yaml)
-    -> ClickUp API cria card + subtasks
-    -> Bot responde no Telegram com confirmacao
-```
-
-### Exemplo de Interacao
-
-**Funcionario envia:**
-> Briefing do cliente Loja Bella: Precisamos de 3 posts para Instagram sobre a promocao de verao e 1 banner para o site. Urgente, promocao comeca dia 25.
-
-**Bot responde:**
-> **Briefing analisado - Cliente: Loja Bella**
->
-> Card criado: **Instagram - Loja Bella - Fevereiro 2026**
-> Prioridade: Urgente
->
-> 4 subtasks criadas:
-> - Post 1 - Promocao Verao -> Design: @joao | Copy: @maria
-> - Post 2 - Promocao Verao -> Design: @joao | Copy: @maria
-> - Post 3 - Promocao Verao -> Design: @joao | Copy: @maria
-> - Banner Site - Promocao Verao -> Design: @ana
-
-## Fluxo de Referencia - Social Media Agency
-
-Baseado no fluxograma oficial da agencia (`Fluxograma Social Media.pdf`):
+## Architecture
 
 ```
-Atendimento -> Card ClickUp (Planejamento) -> Problematizar -> Direcionamento
--> Cronograma de posts -> Revisao Interna (Luis/Content Lead) -> Aprovacao Cliente
--> Desenvolvimento (Designer) -> Criacao Arte -> Revisao Interna
--> Aprovacao Cliente -> Agendamento (MLabs) -> Postagem -> Relatorio
+Telegram (briefing)                  Client Portal (React)
+       │                                    │
+       ▼                                    ▼
+  FastAPI Server ◄──── EventBridge ────► Lambda Functions
+       │                                (approval, reports, reminders)
+       ▼
+  AI Agent Pipeline
+  ┌─────────────────────────────────────────┐
+  │  Briefing Analyzer → Creative Director  │
+  │  → Content Reviewer → Brand Compliance  │
+  │  → Schedule Generator                   │
+  └─────────────┬───────────────────────────┘
+                │
+       ┌────────┴────────┐
+       ▼                 ▼
+   ClickUp API     PostgreSQL (RDS)
+  (task creation)  (logs, approvals, analytics)
 ```
 
-**Padrao de nomenclatura do card:** `(Rede Social) (Cliente) (Mes) (Ano)`
+## Tech Stack
 
-**O MVP automatiza as etapas 1-2:** Recebe briefing e cria o card com subtasks no ClickUp.
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.12+ |
+| Bot | python-telegram-bot (webhook mode) |
+| API Server | FastAPI + Uvicorn |
+| AI Agents | Agno framework (structured output) |
+| LLM | Claude via OpenRouter + Groq |
+| Database | PostgreSQL + SQLAlchemy + Alembic |
+| Approval Portal | Next.js + Tailwind CSS |
+| Admin Dashboard | React + Vite + shadcn/ui |
+| Observability | Langfuse (OpenTelemetry) |
+| Infrastructure | AWS ECS Fargate, Lambda, RDS, S3, EventBridge |
+| IaC | CloudFormation + SAM |
+| CI/CD | GitHub Actions |
 
-## Stack Tecnica
-
-| Componente | Tecnologia |
-|---|---|
-| Linguagem | Python 3.12+ |
-| Bot Telegram | python-telegram-bot (webhook mode) |
-| API Server | FastAPI + uvicorn |
-| Agentes IA | Agno (structured output) |
-| LLM | OpenRouter |
-| Banco de dados | PostgreSQL + SQLAlchemy + Alembic |
-| HTTP Client | httpx (async) |
-| Validacao | Pydantic v2 |
-| Config | pydantic-settings |
-| Testes | pytest + pytest-asyncio + respx |
-| Infra local | Docker Compose |
-| Cloud (futuro) | AWS (ECS/Lambda + RDS) |
-
-## Estrutura do Projeto
-
-```
-marketing-bot/
-├── src/
-│   ├── api/
-│   │   └── app.py                # FastAPI (webhook endpoint, health check)
-│   ├── agents/
-│   │   ├── schemas.py            # Pydantic models (BriefingAnalysis, PostTask)
-│   │   └── briefing_analyzer.py  # Agente Agno (analisa briefing)
-│   ├── bot/
-│   │   ├── handlers.py           # Handlers do Telegram
-│   │   └── responses.py          # Formatacao de respostas
-│   ├── integrations/
-│   │   └── clickup/
-│   │       ├── client.py         # Client async ClickUp API
-│   │       └── models.py         # Models de request/response
-│   ├── engine/
-│   │   └── rules.py              # Motor de regras (YAML)
-│   ├── db/
-│   │   ├── models.py             # SQLAlchemy models
-│   │   ├── session.py            # Async session factory
-│   │   └── repository.py         # Operacoes de banco
-│   ├── config/
-│   │   └── settings.py           # Configuracoes (.env)
-│   └── main.py                   # Entry point
-├── config/
-│   └── rules.yaml                # Regras de atribuicao
-├── tests/                        # 28 testes
-├── alembic/                      # Migrations
-├── docs/
-│   └── plans/
-│       ├── 2026-02-20-marketing-briefing-bot-design.md
-│       └── 2026-02-20-marketing-briefing-bot-implementation.md
-├── docker-compose.yml
-├── pyproject.toml
-└── .env.example
-```
-
-## Setup Local
-
-### Pre-requisitos
-
-- Python 3.12+
-- Docker (para PostgreSQL)
-
-### Instalacao
+## Quick Start
 
 ```bash
-# Clonar o repositorio
-git clone git@github.com:MyOrg-AI/marketing-bot.git
-cd marketing-bot
-
-# Criar venv e instalar dependencias
-python3 -m venv .venv
-source .venv/bin/activate
+# Clone and install
+git clone https://github.com/diego-zetria/ai-marketing-orchestrator.git
+cd ai-marketing-orchestrator
 pip install -e ".[dev]"
 
-# Copiar e preencher variaveis de ambiente
+# Configure
 cp .env.example .env
-# Edite .env com seus tokens reais
+# Edit .env with your API keys
 
-# Subir PostgreSQL
+# Start PostgreSQL
 docker compose up -d
 
-# Rodar migrations
+# Run migrations
 alembic upgrade head
 
-# Rodar testes
-pytest tests/ -v
-```
-
-### Rodar o Bot
-
-```bash
-# Modo desenvolvimento (polling)
-# Deixe TELEGRAM_WEBHOOK_URL vazio no .env
-python -m src.main
-
-# Modo producao (webhook)
-# Preencha TELEGRAM_WEBHOOK_URL no .env
+# Run the bot
 python -m src.main
 ```
 
-## Configuracao de Regras
+## Project Structure
 
-Edite `config/rules.yaml` para definir assignees, tags e overrides por cliente:
+```
+ai-marketing-orchestrator/
+├── src/
+│   ├── agents/              # AI agents (briefing analyzer, creative director, brand compliance, etc.)
+│   ├── api/admin/           # Admin backoffice API (FastAPI)
+│   ├── approval/            # Client approval portal backend (auth, email, media, WhatsApp)
+│   ├── bot/                 # Telegram bot handlers, Instagram sync, reports
+│   ├── db/                  # SQLAlchemy models, migrations, repositories
+│   ├── engine/              # Rules engine (YAML-based assignment logic)
+│   ├── integrations/        # ClickUp, Instagram, S3, EventBridge clients
+│   ├── observability/       # Langfuse integration, cost tracking
+│   └── config/              # Pydantic settings
+├── approval-portal/         # Next.js client approval UI
+├── frontend/                # React admin dashboard
+├── lambdas/                 # AWS Lambda functions (approval, reports, reminders)
+├── infra/                   # CloudFormation + SAM templates
+├── config/
+│   ├── rules.yaml           # Assignment rules and client overrides
+│   └── brands/              # Brand guidelines per client
+├── tests/                   # 80+ tests
+├── alembic/                 # Database migrations
+├── docker-compose.yml
+└── pyproject.toml
+```
+
+## Rules Configuration
+
+Team assignments and client routing are configured via `config/rules.yaml`:
 
 ```yaml
 assignment_rules:
   design:
-    default_assignees: ["clickup_user_id"]
+    default_assignees: ["designer_clickup_id"]
     tags: ["design"]
   copy:
-    default_assignees: ["clickup_user_id"]
-    tags: ["copy", "redacao"]
+    default_assignees: ["copywriter_clickup_id"]
+    tags: ["copy"]
 
 client_overrides:
-  "Cliente X":
-    designer: "clickup_user_id_especifico"
-    list_id: "list_id_especifica"
+  "Client Name":
+    designer: "specific_designer_id"
+    list_id: "client_specific_list_id"
 ```
 
-## Variaveis de Ambiente
+## AWS Deployment
 
-| Variavel | Descricao |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | Token do bot Telegram (@BotFather) |
-| `TELEGRAM_WEBHOOK_URL` | URL publica para webhook (vazio = polling mode) |
-| `TELEGRAM_ALLOWED_USER_IDS` | IDs autorizados, separados por virgula |
-| `OPENROUTER_API_KEY` | Chave da API do OpenRouter |
-| `OPENROUTER_MODEL_ID` | Modelo LLM (default: `anthropic/claude-sonnet-4`) |
-| `CLICKUP_API_TOKEN` | Token da API do ClickUp |
-| `CLICKUP_DEFAULT_LIST_ID` | List ID padrao para criacao de tasks |
-| `DATABASE_URL` | Connection string PostgreSQL |
+The platform runs on AWS with:
 
-## Testes
+- **ECS Fargate** -- Bot + API server (ARM64 Graviton)
+- **RDS PostgreSQL** -- Persistent storage
+- **Lambda** -- Approval processor, report generator, reminders
+- **S3** -- Media asset storage
+- **EventBridge** -- Event-driven approval workflows
+- **GitHub Actions** -- CI/CD pipeline with ECR push and ECS deploy
 
 ```bash
-# Rodar todos os testes
+# Deploy via CloudFormation
+cd infra/
+aws cloudformation deploy --template-file cloudformation.yaml --stack-name marketing-bot --capabilities CAPABILITY_IAM
+```
+
+## Testing
+
+```bash
+# Run all tests
 pytest tests/ -v
 
-# Com cobertura
+# With coverage
 pytest tests/ -v --cov=src
 ```
 
-**28 testes** cobrindo: configuracao, schemas, rules engine, ClickUp client, briefing analyzer, bot responses, FastAPI health, e integracao end-to-end.
+**80+ tests** covering: AI agents, rules engine, ClickUp integration, Telegram handlers, approval workflows, Instagram sync, admin API, and end-to-end flows.
 
-## Documentacao
+## License
 
-- **Design completo:** `docs/plans/2026-02-20-marketing-briefing-bot-design.md`
-- **Plano de implementacao:** `docs/plans/2026-02-20-marketing-briefing-bot-implementation.md`
-- **Fluxograma original:** `Fluxograma Social Media.pdf`
-
-## Evolucoes Futuras
-
-1. Mais fluxos: Trafego pago, branding, video
-2. Conversacao multi-turno (bot faz follow-up)
-3. Webhooks ClickUp (reagir a mudancas de status)
-4. Dashboard de monitoramento
-5. Integracao com Google Drive e MLabs
-6. Deploy AWS (ECS/Lambda + RDS + API Gateway)
-
----
-
-Desenvolvido por [MyOrg AI](https://github.com/MyOrg-AI) para a Agencia Agency.
+MIT
