@@ -16,24 +16,47 @@ AI-powered automation platform for marketing agencies. A **Telegram bot** receiv
 
 ## Architecture
 
-```
-Telegram (briefing)                  Client Portal (React)
-       │                                    │
-       ▼                                    ▼
-  FastAPI Server ◄──── EventBridge ────► Lambda Functions
-       │                                (approval, reports, reminders)
-       ▼
-  AI Agent Pipeline
-  ┌─────────────────────────────────────────┐
-  │  Briefing Analyzer → Creative Director  │
-  │  → Content Reviewer → Brand Compliance  │
-  │  → Schedule Generator                   │
-  └─────────────┬───────────────────────────┘
-                │
-       ┌────────┴────────┐
-       ▼                 ▼
-   ClickUp API     PostgreSQL (RDS)
-  (task creation)  (logs, approvals, analytics)
+```mermaid
+graph TB
+    subgraph Input
+        TG[Telegram Bot]
+        PORTAL[Client Approval Portal<br/>Next.js + Magic Link]
+        ADMIN[Admin Dashboard<br/>React + Vite]
+    end
+
+    subgraph "FastAPI Server"
+        API[API Server]
+        subgraph "AI Agent Pipeline"
+            BA[Briefing Analyzer] --> CD[Creative Director]
+            CD --> CR[Content Reviewer]
+            CR --> BC[Brand Compliance]
+            BC --> SG[Schedule Generator]
+        end
+    end
+
+    subgraph AWS
+        EB[EventBridge] --> LAMBDA[Lambda Functions<br/>Approvals, Reports, Reminders]
+        RDS[(PostgreSQL RDS)]
+        S3[S3 Media Storage]
+    end
+
+    subgraph External
+        CLICKUP[ClickUp API]
+        IG[Instagram API]
+        LANGFUSE[Langfuse<br/>LLM Observability]
+    end
+
+    TG --> API
+    PORTAL --> API
+    ADMIN --> API
+    API --> BA
+    SG --> CLICKUP
+    SG --> RDS
+    API --> EB
+    LAMBDA --> RDS
+    API --> S3
+    API --> IG
+    API --> LANGFUSE
 ```
 
 ## Tech Stack
