@@ -53,6 +53,18 @@ Telegram (briefing)                  Client Portal (React)
 | IaC | CloudFormation + SAM |
 | CI/CD | GitHub Actions |
 
+## Engineering Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Agno over LangChain/CrewAI** | Agno provides structured outputs with Pydantic validation natively, reducing boilerplate for multi-agent orchestration. Simpler dependency tree and more predictable token usage compared to LangChain's abstraction layers |
+| **Multi-agent pipeline over single LLM** | Separating briefing analysis, creative review, and brand compliance into distinct agents allows independent prompt tuning, cost optimization per stage, and parallel execution of non-dependent steps |
+| **YAML rules engine over hardcoded logic** | Client-specific routing and team assignments change frequently. YAML configuration enables non-developer stakeholders to modify rules without code deployments |
+| **Magic link auth over OAuth for client portal** | Clients reviewing creative assets are non-technical users who need frictionless access. Magic links eliminate password management while maintaining per-session security |
+| **EventBridge over SQS for workflow orchestration** | EventBridge provides content-based routing and scheduling natively, enabling time-based triggers (monthly reports, approval reminders) without custom polling infrastructure |
+| **Langfuse over custom logging** | Provides OpenTelemetry-compatible LLM observability with cost tracking per agent, latency percentiles, and token usage analytics — critical for optimizing multi-agent costs |
+| **CloudFormation + SAM over Terraform** | Lambda functions with EventBridge rules benefit from SAM's native support for serverless resources, while the main infrastructure (ECS, RDS) uses standard CloudFormation |
+
 ## Quick Start
 
 ```bash
