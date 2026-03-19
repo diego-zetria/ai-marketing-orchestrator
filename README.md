@@ -1,3 +1,10 @@
+[![Build and Deploy](https://github.com/diego-zetria/ai-marketing-orchestrator/actions/workflows/deploy.yml/badge.svg)](https://github.com/diego-zetria/ai-marketing-orchestrator/actions/workflows/deploy.yml)
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-ECS_Fargate-FF9900?logo=amazonwebservices)
+![Tests](https://img.shields.io/badge/tests-80%2B-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 # AI Marketing Orchestrator
 
 AI-powered automation platform for marketing agencies. A **Telegram bot** receives client briefings in natural language and automatically creates structured tasks in ClickUp, with a **client approval portal**, **Instagram analytics**, and **automated monthly reporting**.
